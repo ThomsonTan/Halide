@@ -524,8 +524,6 @@ void Pipeline::compile_jit(const Target &target_arg) {
     std::map<std::string, JITExtern> lowered_externs = contents->jit_externs;
 
     if (target.arch == Target::WebAssembly) {
-        Buffer<uint8_t> wasm_code = module.compile_to_buffer(/*make_weak_symbols_strong*/ true);
-
         FindExterns find_externs(lowered_externs);
         for (const LoweredFunc &f : contents->module.functions()) {
             f.body.accept(&find_externs);
@@ -544,9 +542,8 @@ void Pipeline::compile_jit(const Target &target_arg) {
         }
 
         contents->wasm_module = WasmModule::compile(
-            target,
+            module,
             args_and_outputs,
-            wasm_code.data(), wasm_code.size_in_bytes(),
             contents->module.name(),
             lowered_externs,
             make_externs_jit_module(target, lowered_externs)

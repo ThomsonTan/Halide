@@ -30,9 +30,8 @@ struct WasmModule {
 
     /** Compile generated wasm code with a set of externs. */
     static WasmModule compile(
-        const Target &target,
+        const Module &module,
         const std::vector<Argument> &arguments,
-        const void *source, size_t source_len,
         const std::string &fn_name,
         const std::map<std::string, JITExtern> &externs,
         const std::vector<JITModule> &extern_deps

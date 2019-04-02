@@ -634,18 +634,19 @@ void add_underscores_to_posix_calls_on_windows(llvm::Module *m) {
     }
 }
 
-std::unique_ptr<llvm::Module> get_wasm_jit_module(const Target &t, llvm::LLVMContext *c) {
+std::unique_ptr<llvm::Module> link_with_wasm_jit_runtime(llvm::LLVMContext *c, const Target &t,
+                                                         std::unique_ptr<llvm::Module> extra_module) {
     bool bits_64 = (t.bits == 64);
     bool debug = t.has_feature(Target::Debug);
 
     vector<std::unique_ptr<llvm::Module>> modules;
+    modules.push_back(std::move(extra_module));
     modules.push_back(get_initmod_fake_thread_pool(c, bits_64, debug));
     modules.push_back(get_initmod_posix_allocator(c, bits_64, debug));
     modules.push_back(get_initmod_buffer_t(c, bits_64, debug));
     modules.push_back(get_initmod_destructors(c, bits_64, debug));
     modules.push_back(get_initmod_posix_math_ll(c));
     modules.push_back(get_initmod_tracing(c, bits_64, debug));
-    modules.push_back(get_initmod_write_debug_image(c, bits_64, debug));
     modules.push_back(get_initmod_cache(c, bits_64, debug));
     modules.push_back(get_initmod_to_string(c, bits_64, debug));
     modules.push_back(get_initmod_alignment_32(c, bits_64, debug));

@@ -248,47 +248,6 @@ namespace Halide {
 namespace Internal {
 namespace {
 
-// TODO: this is highly suboptimal; we should be able to build this once,
-// load it directly into V8, then dlopen subsequent instances; the LLVM wasm
-// doesn't yet support this, so for now, we explicitly regenerate and relink
-// each time.
-struct HalideRuntimeCache {
-    Target target;
-    llvm::SmallVector<char, 2> wasm;
-
-    static const HalideRuntimeCache &get(const Target &t_in);
-
-private:
-    static std::mutex rtcache_lock;
-};
-
-/*static*/ std::mutex HalideRuntimeCache::rtcache_lock;
-
-/*static*/ const HalideRuntimeCache &HalideRuntimeCache::get(const Target &t_in) {
-    std::lock_guard<std::mutex> lock(rtcache_lock);
-
-    static std::unique_ptr<HalideRuntimeCache> halide_runtime_cache;
-
-    const Target t = t_in.without_feature(Target::NoRuntime).without_feature(Target::JIT);
-    if (halide_runtime_cache && halide_runtime_cache->target != t) {
-        wdebug(0) << "Discarding halide_runtime_wasm\n";
-        halide_runtime_cache.reset();
-    }
-    if (!halide_runtime_cache) {
-        wdebug(0) << "Regenerating halide_runtime_wasm\n";
-
-        halide_runtime_cache.reset(new HalideRuntimeCache);
-        halide_runtime_cache->target = t;
-
-        llvm::LLVMContext context;
-        std::unique_ptr<llvm::Module> llvm_module = get_wasm_jit_module(t, &context);
-
-        llvm::raw_svector_ostream object_stream(halide_runtime_cache->wasm);
-        compile_llvm_module_to_object(*llvm_module, object_stream);
-    }
-    return *halide_runtime_cache;
-}
-
 using namespace v8;
 
 using wasm32_ptr_t = int32_t;
@@ -1175,26 +1134,31 @@ void add_extern_callbacks(const Local<Context> &context,
     }
 }
 
-std::vector<char> link_wasm(const Target &target, const void *source, size_t source_len, const std::string &fn_name) {
+std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_name) {
     static std::mutex link_lock;
     std::lock_guard<std::mutex> lock(link_lock);
 
+    llvm::LLVMContext context;
+    std::unique_ptr<llvm::Module> fn_module(compile_module_to_llvm_module(module, context));
+
+    std::unique_ptr<llvm::Module> llvm_module =
+        link_with_wasm_jit_runtime(&context, module.target(), std::move(fn_module));
+
+    // Building and linking in non-PIC mode simplifies our JIT runtime considerably,
+    // so that's what we'll do.
+    llvm_module->addModuleFlag(llvm::Module::Warning, "halide_disable_pic", 1);
+
+    llvm::SmallVector<char, 4096> object;
+    llvm::raw_svector_ostream object_stream(object);
+    compile_llvm_module_to_object(*llvm_module, object_stream);
+
     // TODO: surely there's a better way that doesn't require spooling things
     // out to temp files
-    TemporaryFile fn_obj_file("", ".o");
-    write_entire_file(fn_obj_file.pathname(), source, source_len);
+    TemporaryFile obj_file("", ".o");
+    write_entire_file(obj_file.pathname(), object.data(), object.size());
 #if WASM_DEBUG_LEVEL
-    fn_obj_file.detach();
-    wdebug(0) << "Dumping fn_obj_file to " << fn_obj_file.pathname() << "\n";
-#endif
-
-    TemporaryFile runtime_obj_file("", ".o");
-    const auto &rt = HalideRuntimeCache::get(target).wasm;
-    write_entire_file(runtime_obj_file.pathname(), &rt[0], rt.size());
-
-#if WASM_DEBUG_LEVEL
-    runtime_obj_file.detach();
-    wdebug(0) << "Dumping runtime to " << runtime_obj_file.pathname() << "\n";
+    obj_file.detach();
+    wdebug(0) << "Dumping obj_file to " << obj_file.pathname() << "\n";
 #endif
 
     TemporaryFile wasm_output("", ".wasm");
@@ -1204,9 +1168,9 @@ std::vector<char> link_wasm(const Target &target, const void *source, size_t sou
         // For debugging purposes:
         // "--verbose",
         // "-error-limit=0",
+        // "--print-gc-sections",
         "--allow-undefined",
-        fn_obj_file.pathname(),
-        runtime_obj_file.pathname(),
+        obj_file.pathname(),
         "--entry=" + fn_name,
         "-o",
         wasm_output.pathname()
@@ -1259,10 +1223,8 @@ struct WasmModuleContents {
 #endif
 
     WasmModuleContents(
-        const Target &target,
+        const Module &module,
         const std::vector<Argument> &arguments,
-        const void *source,
-        size_t source_len,
         const std::string &fn_name,
         const JITExternMap &jit_externs,
         const std::vector<JITModule> &extern_deps
@@ -1274,14 +1236,12 @@ struct WasmModuleContents {
 };
 
 WasmModuleContents::WasmModuleContents(
-    const Target &target,
+    const Module &module,
     const std::vector<Argument> &arguments,
-    const void *source,
-    size_t source_len,
     const std::string &fn_name,
     const JITExternMap &jit_externs,
     const std::vector<JITModule> &extern_deps
-) : target(target),
+) : target(module.target()),
     arguments(arguments),
     jit_externs(jit_externs),
     extern_deps(extern_deps),
@@ -1345,7 +1305,7 @@ WasmModuleContents::WasmModuleContents(
 
     auto fn_name_str = String::NewFromUtf8(isolate, fn_name.c_str());
 
-    std::vector<char> final_wasm = link_wasm(target, source, source_len, fn_name);
+    std::vector<char> final_wasm = compile_to_wasm(module, fn_name);
 
 #if V8_API_VERSION < 74
     using WasmModuleObject = WasmCompiledModule;
@@ -1595,22 +1555,20 @@ bool WasmModule::can_jit_target(const Target &target) {
 
 /*static*/
 WasmModule WasmModule::compile(
-  const Target &target,
-  const std::vector<Argument> &arguments,
-  const void *source,
-  size_t source_len,
-  const std::string &fn_name,
-  const JITExternMap &jit_externs,
-  const std::vector<JITModule> &extern_deps
+    const Module &module,
+    const std::vector<Argument> &arguments,
+    const std::string &fn_name,
+    const JITExternMap &jit_externs,
+    const std::vector<JITModule> &extern_deps
 ) {
 #if !defined(WITH_V8) && !defined(WITH_SPIDERMONKEY)
     user_error << "Cannot run JITted JavaScript without configuring a JavaScript engine.";
     return WasmModule();
 #endif
 
-    WasmModule module;
-    module.contents = new WasmModuleContents(target, arguments, source, source_len, fn_name, jit_externs, extern_deps);
-    return module;
+    WasmModule wasm_module;
+    wasm_module.contents = new WasmModuleContents(module, arguments, fn_name, jit_externs, extern_deps);
+    return wasm_module;
 }
 
 /** Run generated previously compiled wasm code with a set of arguments. */
