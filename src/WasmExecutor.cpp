@@ -1144,10 +1144,6 @@ std::vector<char> compile_to_wasm(const Module &module, const std::string &fn_na
     std::unique_ptr<llvm::Module> llvm_module =
         link_with_wasm_jit_runtime(&context, module.target(), std::move(fn_module));
 
-    // Building and linking in non-PIC mode simplifies our JIT runtime considerably,
-    // so that's what we'll do.
-    llvm_module->addModuleFlag(llvm::Module::Warning, "halide_disable_pic", 1);
-
     llvm::SmallVector<char, 4096> object;
     llvm::raw_svector_ostream object_stream(object);
     compile_llvm_module_to_object(*llvm_module, object_stream);
