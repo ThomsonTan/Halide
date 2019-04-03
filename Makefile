@@ -147,7 +147,7 @@ POWERPC_LLVM_CONFIG_LIB=$(if $(WITH_POWERPC), powerpc, )
 WEBASSEMBLY_CXX_FLAGS=$(if $(WITH_WEBASSEMBLY), -DWITH_WEBASSEMBLY=1, )
 WEBASSEMBLY_LLVM_CONFIG_LIB=$(if $(WITH_WEBASSEMBLY), webassembly, )
 
-ifneq (,$(findstring wasm_simd_128,$(HL_TARGET)))
+ifneq (,$(findstring wasm_simd128,$(HL_TARGET)))
 	EMCC_SIMD_OPT=1
 	WASM_SHELL += --experimental-wasm-simd
 else

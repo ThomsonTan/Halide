@@ -32,7 +32,6 @@ string CodeGen_WebAssembly::mattrs() const {
 
     if (target.has_feature(Target::WasmSimd128)) {
         s += ",+simd128";
-        user_warning << "Wasm simd128 isn't quite ready yet";
     }
 
     user_assert(target.os == Target::WebAssemblyRuntime)
@@ -48,6 +47,10 @@ string CodeGen_WebAssembly::mattrs() const {
 }
 
 bool CodeGen_WebAssembly::use_soft_float_abi() const {
+    return false;
+}
+
+bool CodeGen_WebAssembly::use_pic() const {
     return false;
 }
 
