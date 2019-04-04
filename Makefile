@@ -858,6 +858,7 @@ RUNTIME_LL_COMPONENTS = \
   posix_math \
   powerpc \
   ptx_dev \
+  wasm_math \
   win32_math \
   x86 \
   x86_avx \

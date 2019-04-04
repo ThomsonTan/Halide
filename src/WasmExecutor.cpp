@@ -965,15 +965,6 @@ void wasm_jit___cxa_atexit_callback(const v8::FunctionCallbackInfo<v8::Value>& a
     // nothing
 }
 
-// Not exactly "fast", but hey
-float fast_inverse_f32(float x) {
-    return 1.0f / x;
-}
-
-float fast_inverse_sqrt_f32(float x) {
-    return 1.0f / std::sqrt(x);
-}
-
 template<typename T, T some_func(T) >
 void wasm_jit_posix_math_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
     Isolate *isolate = args.GetIsolate();
@@ -1398,9 +1389,6 @@ WasmModuleContents::WasmModuleContents(
     ADD_POSIX_MATH2(double, ::atan2)
     ADD_POSIX_MATH2(float,  ::powf)
     ADD_POSIX_MATH2(double, ::pow)
-
-    ADD_POSIX_MATH(float,   fast_inverse_f32)
-    ADD_POSIX_MATH(float,   fast_inverse_sqrt_f32)
 
 #undef ADD_POSIX_MATH
 #undef ADD_POSIX_MATH2

@@ -243,6 +243,12 @@ DECLARE_NO_INITMOD(hvx_128)
 DECLARE_NO_INITMOD(hexagon_cpu_features)
 #endif  // WITH_HEXAGON
 
+#ifdef WITH_WEBASSEMBLY
+DECLARE_LL_INITMOD(wasm_math)
+#else
+DECLARE_NO_INITMOD(wasm_math)
+#endif  // WITH_WEBASSEMBLY
+
 namespace {
 
 llvm::DataLayout get_data_layout_for_target(Target target) {
@@ -639,13 +645,17 @@ std::unique_ptr<llvm::Module> link_with_wasm_jit_runtime(llvm::LLVMContext *c, c
     bool bits_64 = (t.bits == 64);
     bool debug = t.has_feature(Target::Debug);
 
+    // We only need to include things that must be linked in as callable entrypoints;
+    // things that are 'alwaysinline' can be included here but are unnecessary.
     vector<std::unique_ptr<llvm::Module>> modules;
     modules.push_back(std::move(extra_module));
     modules.push_back(get_initmod_fake_thread_pool(c, bits_64, debug));
     modules.push_back(get_initmod_posix_allocator(c, bits_64, debug));
     modules.push_back(get_initmod_buffer_t(c, bits_64, debug));
     modules.push_back(get_initmod_destructors(c, bits_64, debug));
-    modules.push_back(get_initmod_posix_math_ll(c));
+    // These two aren't necessary, since they are 100% alwaysinline
+    // modules.push_back(get_initmod_posix_math_ll(c));
+    // modules.push_back(get_initmod_wasm_math_ll(c));
     modules.push_back(get_initmod_tracing(c, bits_64, debug));
     modules.push_back(get_initmod_cache(c, bits_64, debug));
     modules.push_back(get_initmod_to_string(c, bits_64, debug));
@@ -956,6 +966,9 @@ std::unique_ptr<llvm::Module> get_initial_module_for_target(Target t, llvm::LLVM
             if (t.has_feature(Target::Profile)) {
                 user_assert(t.os != Target::WebAssemblyRuntime) << "The profiler cannot be used in a threadless environment.";
                 modules.push_back(get_initmod_profiler_inlined(c, bits_64, debug));
+            }
+            if (t.arch == Target::WebAssembly) {
+                modules.push_back(get_initmod_wasm_math_ll(c));
             }
         }
 
