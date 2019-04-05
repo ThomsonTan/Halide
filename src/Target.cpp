@@ -800,6 +800,18 @@ int Target::natural_vector_size(const Halide::Type &t) const {
             // SSE was all 128-bit. We ignore MMX.
             return 16 / data_size;
         }
+    } else if (arch == Target::WebAssembly) {
+        if (has_feature(Halide::Target::WasmSimd128)) {
+            if (t.bits() == 64) {
+                // int64 and float64 aren't supported in simd128.
+                return 1;
+            }
+            // 128-bit vectors for other types.
+            return 16 / data_size;
+        } else {
+            // No vectors, sorry.
+            return 1;
+        }
     } else {
         // Assume 128-bit vectors on other targets.
         return 16 / data_size;
