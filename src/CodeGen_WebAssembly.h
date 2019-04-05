@@ -18,6 +18,10 @@ public:
     static void test();
 
 protected:
+    using CodeGen_Posix::visit;
+
+    void visit(const Cast *) override;
+
     std::string mcpu() const override;
     std::string mattrs() const override;
     bool use_soft_float_abi() const override;
