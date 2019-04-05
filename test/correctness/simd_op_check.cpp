@@ -2228,27 +2228,36 @@ check("v*.w += vrmpy(v*.b,v*.b)", hvx_width, i32_1 + i32(i8_1)*i8_1 + i32(i8_2)*
                 check("i16x8.add_saturate_s",   4*w, i16_sat(i32(i16_1) + i32(i16_2)));
                 check("i16x8.add_saturate_u",   4*w, u16_sat(u32(u16_1) + u32(u16_2)));
 
+                // These are (apparently) not implemented properly in V8 yet;
+                // bug https://bugs.chromium.org/p/v8/issues/detail?id=8460 I think?
                 // Saturating integer subtraction
+                /*
                 check("i8x16.sub_saturate_s",   8*w, i8_sat(i16(i8_1) - i16(i8_2)));
-                // check("i8x16.sub_saturate_u",   8*w, u8_sat(u16(u8_1) - u16(u8_2)));  -- TODO: generates but v-vs-s wrong
                 check("i16x8.sub_saturate_s",   4*w, i16_sat(i32(i16_1) - i32(i16_2)));
-                // check("i16x8.sub_saturate_u",   4*w, u16_sat(u32(u16_1) - u32(u16_2)));  -- TODO: generates but v-vs-s wrong
+                check("i8x16.sub_saturate_u",   8*w, u8_sat(u16(u8_1) - u16(u8_2)));
+                check("i16x8.sub_saturate_u",   4*w, u16_sat(u32(u16_1) - u32(u16_2)));
+                */
 
+                // These aren't being generated, known bug: https://bugs.chromium.org/p/v8/issues/detail?id=8934
                 // Left shift by scalar
-                // check("i8x16.shl",   8*w, i8_1 << i32(x));  -- TODO: does not generate
-                // check("i16x8.shl",   4*w, i16_1 << x);  -- TODO: does not generate
-                // check("i32x4.shl",   2*w, i32_1 << x);  -- TODO: does not generate
+                /*
+                check("i8x16.shl",   8*w, i8_1 << i32(x));
+                check("i16x8.shl",   4*w, i16_1 << x);
+                check("i32x4.shl",   2*w, i32_1 << x);
                 WASM64( check("i64x2.shl",   1*w, i64_1 << x); )
+                */
 
                 // Right shift by scalar
-                // check("i8x16.shr_s",   8*w, i8_1 >> x);  -- TODO: does not generate
-                // check("i16x8.shr_s",   4*w, i16_1 >> x);  -- TODO: does not generate
-                // check("i32x4.shr_s",   2*w, i32_1 >> x);  -- TODO: does not generate
+                /*
+                check("i8x16.shr_s",   8*w, i8_1 >> x);
+                check("i16x8.shr_s",   4*w, i16_1 >> x);
+                check("i32x4.shr_s",   2*w, i32_1 >> x);
                 WASM64( check("i64x2.shr_s",   1*w, i64_1 >> x); )
-                // check("i8x16.shr_u",   8*w, u8_1 >> x);  -- TODO: does not generate
-                // check("i16x8.shr_u",   4*w, u16_1 >> x);  -- TODO: does not generate
-                // check("i32x4.shr_u",   2*w, u32_1 >> x);  -- TODO: does not generate
+                check("i8x16.shr_u",   8*w, u8_1 >> x);
+                check("i16x8.shr_u",   4*w, u16_1 >> x);
+                check("i32x4.shr_u",   2*w, u32_1 >> x);
                 WASM64( check("i64x2.shr_u",   1*w, u64_1 >> x); )
+                */
 
                 // Bitwise logic
                 check("v128.and",   8*w, i8_1 & i8_2);
