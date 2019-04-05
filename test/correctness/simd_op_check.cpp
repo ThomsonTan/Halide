@@ -2175,6 +2175,16 @@ check("v*.w += vrmpy(v*.b,v*.b)", hvx_width, i32_1 + i32(i8_1)*i8_1 + i32(i8_2)*
         Expr u64_1 = in_u64(x), u64_2 = in_u64(x+16), u64_3 = in_u64(x+32);
         Expr bool_1 = (f32_1 > 0.3f), bool_2 = (f32_1 < -0.3f), bool_3 = (f32_1 != -0.34f);
 
+        check("f32.sqrt", 1, sqrt(f32_1));
+        check("f32.min", 1, min(f32_1, f32_2));
+        check("f32.max", 1, max(f32_1, f32_2));
+        check("f32.ceil", 1, ceil(f32_1));
+        check("f32.floor", 1, floor(f32_1));
+        check("f32.trunc", 1, trunc(f32_1));
+        check("f32.nearest", 1, round(f32_1));
+        check("f32.abs", 1, abs(f32_1));
+        check("f32.neg", 1, -f32_1);
+
         if (use_wasm_simd128) {
             for (int w = 2; w <= 4; w++) {
                 // Create vector with identical lanes
