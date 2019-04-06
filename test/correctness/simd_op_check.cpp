@@ -231,7 +231,7 @@ struct Test {
             bool found_it = false;
 
             std::ostringstream msg;
-            msg << op << " did not generate for target=" << target.to_string() << ". Instead we got:\n";
+            msg << op << " did not generate for target=" << target.to_string() << " vector_width=" << vector_width << ". Instead we got:\n";
 
             string line;
             while (getline(asm_file, line)) {
@@ -2186,14 +2186,14 @@ check("v*.w += vrmpy(v*.b,v*.b)", hvx_width, i32_1 + i32(i8_1)*i8_1 + i32(i8_2)*
         check("f32.neg", 1, -f32_1);
 
         if (use_wasm_simd128) {
-            for (int w = 2; w <= 4; w++) {
+            for (int w = 1; w <= 4; w <<= 1) {
                 // Create vector with identical lanes
-                check("i8x16.splat", 8*w, u8_1 * u8(42));
-                check("i16x8.splat", 4*w, u16_1 * u16(42));
-                check("i32x4.splat", 2*w, u32_1 * u32(42));
-                WASM64( check("i64x2.splat", 1*w, u64_1 * u64(42)); )
-                check("f32x4.splat", 4*w, f32_1 * f32(42));
-                WASM64( check("f64x2.splat", 2*w, f64_1 * f64(42)); )
+                check("i8x16.splat", 16*w, u8_1 * u8(42));
+                check("i16x8.splat", 8*w, u16_1 * u16(42));
+                check("i32x4.splat", 4*w, u32_1 * u32(42));
+                WASM64( check("i64x2.splat", 2*w, u64_1 * u64(42)); )
+                check("f32x4.splat", 8*w, f32_1 * f32(42));
+                WASM64( check("f64x2.splat", 4*w, f64_1 * f64(42)); )
 
                 // Extract lane as a scalar (extract_lane)
                 // Replace lane value (replace_lane)
@@ -2201,227 +2201,227 @@ check("v*.w += vrmpy(v*.b,v*.b)", hvx_width, i32_1 + i32(i8_1)*i8_1 + i32(i8_2)*
                     // to be used explicitly
 
                 // Shuffling using immediate indices
-                if (w != 3) {  // TODO -- fails to generate for w=3
-                    check("v8x16.shuffle", 8*w, in_u8(2*x));
-                }
+                check("v8x16.shuffle", 16*w, in_u8(2*x));
+                check("v8x16.shuffle", 8*w, in_u16(2*x));
+                check("v8x16.shuffle", 4*w, in_u32(2*x));
 
                 // Shuffling using variable indices
-                // check("v8x16.shuffle", 8*w, in_u8(in_u8(x+32)));  -- TODO: fails to generate, but is this the right expr?
+                // check("v8x16.shuffle", 16*w, in_u8(in_u8(x+32)));  -- TODO: fails to generate, but is this the right expr?
 
                 // Integer addition
-                check("i8x16.add",   8*w, i8_1 + i8_2);
-                check("i16x8.add",   4*w, i16_1 + i16_2);
-                check("i32x4.add",   2*w, i32_1 + i32_2);
-                WASM64( check("i64x2.add",   1*w, i64_1 + i64_2); )
+                check("i8x16.add",   16*w, i8_1 + i8_2);
+                check("i16x8.add",   8*w, i16_1 + i16_2);
+                check("i32x4.add",   4*w, i32_1 + i32_2);
+                WASM64( check("i64x2.add",   2*w, i64_1 + i64_2); )
 
                 // Integer subtraction
-                check("i8x16.sub",   8*w, i8_1 - i8_2);
-                check("i16x8.sub",   4*w, i16_1 - i16_2);
-                check("i32x4.sub",   2*w, i32_1 - i32_2);
-                WASM64( check("i64x2.sub",   1*w, i64_1 - i64_2); )
+                check("i8x16.sub",   16*w, i8_1 - i8_2);
+                check("i16x8.sub",   8*w, i16_1 - i16_2);
+                check("i32x4.sub",   4*w, i32_1 - i32_2);
+                WASM64( check("i64x2.sub",   2*w, i64_1 - i64_2); )
 
                 // Integer multiplication
-                check("i8x16.mul",   8*w, i8_1 * i8_2);
-                check("i16x8.mul",   4*w, i16_1 * i16_2);
-                check("i32x4.mul",   2*w, i32_1 * i32_2);
-                WASM64( check("i64x2.mul",   1*w, i64_1 * i64_2); )
+                check("i8x16.mul",   16*w, i8_1 * i8_2);
+                check("i16x8.mul",   8*w, i16_1 * i16_2);
+                check("i32x4.mul",   4*w, i32_1 * i32_2);
+                WASM64( check("i64x2.mul",   2*w, i64_1 * i64_2); )
 
                 // Integer negation
-                check("i8x16.neg",   8*w, -i8_1);
-                check("i16x8.neg",   4*w, -i16_1);
-                check("i32x4.neg",   2*w, -i32_1);
-                WASM64( check("i64x2.neg",   1*w, -i64_1); )
+                check("i8x16.neg",   16*w, -i8_1);
+                check("i16x8.neg",   8*w, -i16_1);
+                check("i32x4.neg",   4*w, -i32_1);
+                WASM64( check("i64x2.neg",   2*w, -i64_1); )
 
                 // Saturating integer addition
-                check("i8x16.add_saturate_s",   8*w, i8_sat(i16(i8_1) + i16(i8_2)));
-                check("i8x16.add_saturate_u",   8*w, u8_sat(u16(u8_1) + u16(u8_2)));
-                check("i16x8.add_saturate_s",   4*w, i16_sat(i32(i16_1) + i32(i16_2)));
-                check("i16x8.add_saturate_u",   4*w, u16_sat(u32(u16_1) + u32(u16_2)));
+                check("i8x16.add_saturate_s",   16*w, i8_sat(i16(i8_1) + i16(i8_2)));
+                check("i8x16.add_saturate_u",   16*w, u8_sat(u16(u8_1) + u16(u8_2)));
+                check("i16x8.add_saturate_s",   8*w, i16_sat(i32(i16_1) + i32(i16_2)));
+                check("i16x8.add_saturate_u",   8*w, u16_sat(u32(u16_1) + u32(u16_2)));
 
                 // These are (apparently) not implemented properly in V8 yet;
                 // bug https://bugs.chromium.org/p/v8/issues/detail?id=8460 I think?
                 // Saturating integer subtraction
                 /*
-                check("i8x16.sub_saturate_s",   8*w, i8_sat(i16(i8_1) - i16(i8_2)));
-                check("i16x8.sub_saturate_s",   4*w, i16_sat(i32(i16_1) - i32(i16_2)));
-                check("i8x16.sub_saturate_u",   8*w, u8_sat(u16(u8_1) - u16(u8_2)));
-                check("i16x8.sub_saturate_u",   4*w, u16_sat(u32(u16_1) - u32(u16_2)));
+                check("i8x16.sub_saturate_s",   16*w, i8_sat(i16(i8_1) - i16(i8_2)));
+                check("i16x8.sub_saturate_s",   8*w, i16_sat(i32(i16_1) - i32(i16_2)));
+                check("i8x16.sub_saturate_u",   16*w, u8_sat(u16(u8_1) - u16(u8_2)));
+                check("i16x8.sub_saturate_u",   8*w, u16_sat(u32(u16_1) - u32(u16_2)));
                 */
 
                 // These aren't being generated, known bug: https://bugs.chromium.org/p/v8/issues/detail?id=8934
                 // Left shift by scalar
                 /*
-                check("i8x16.shl",   8*w, i8_1 << i32(x));
-                check("i16x8.shl",   4*w, i16_1 << x);
-                check("i32x4.shl",   2*w, i32_1 << x);
-                WASM64( check("i64x2.shl",   1*w, i64_1 << x); )
+                check("i8x16.shl",   16*w, i8_1 << i32(x));
+                check("i16x8.shl",   8*w, i16_1 << x);
+                check("i32x4.shl",   4*w, i32_1 << x);
+                WASM64( check("i64x2.shl",   2*w, i64_1 << x); )
                 */
 
                 // Right shift by scalar
                 /*
-                check("i8x16.shr_s",   8*w, i8_1 >> x);
-                check("i16x8.shr_s",   4*w, i16_1 >> x);
-                check("i32x4.shr_s",   2*w, i32_1 >> x);
-                WASM64( check("i64x2.shr_s",   1*w, i64_1 >> x); )
-                check("i8x16.shr_u",   8*w, u8_1 >> x);
-                check("i16x8.shr_u",   4*w, u16_1 >> x);
-                check("i32x4.shr_u",   2*w, u32_1 >> x);
-                WASM64( check("i64x2.shr_u",   1*w, u64_1 >> x); )
+                check("i8x16.shr_s",   16*w, i8_1 >> x);
+                check("i16x8.shr_s",   8*w, i16_1 >> x);
+                check("i32x4.shr_s",   4*w, i32_1 >> x);
+                WASM64( check("i64x2.shr_s",   2*w, i64_1 >> x); )
+                check("i8x16.shr_u",   16*w, u8_1 >> x);
+                check("i16x8.shr_u",   8*w, u16_1 >> x);
+                check("i32x4.shr_u",   4*w, u32_1 >> x);
+                WASM64( check("i64x2.shr_u",   2*w, u64_1 >> x); )
                 */
 
                 // Bitwise logic
-                check("v128.and",   8*w, i8_1 & i8_2);
-                check("v128.and",   4*w, i16_1 & i16_2);
-                check("v128.and",   2*w, i32_1 & i32_2);
-                WASM64( check("v128.and",   1*w, i64_1 & i64_2); )
+                check("v128.and",   16*w, i8_1 & i8_2);
+                check("v128.and",   8*w, i16_1 & i16_2);
+                check("v128.and",   4*w, i32_1 & i32_2);
+                WASM64( check("v128.and",   2*w, i64_1 & i64_2); )
 
-                check("v128.or",   8*w, i8_1 | i8_2);
-                check("v128.or",   4*w, i16_1 | i16_2);
-                check("v128.or",   2*w, i32_1 | i32_2);
-                WASM64( check("v128.or",   1*w, i64_1 | i64_2); )
+                check("v128.or",   16*w, i8_1 | i8_2);
+                check("v128.or",   8*w, i16_1 | i16_2);
+                check("v128.or",   4*w, i32_1 | i32_2);
+                WASM64( check("v128.or",   2*w, i64_1 | i64_2); )
 
-                check("v128.xor",   8*w, i8_1 ^ i8_2);
-                check("v128.xor",   4*w, i16_1 ^ i16_2);
-                check("v128.xor",   2*w, i32_1 ^ i32_2);
-                WASM64( check("v128.xor",   1*w, i64_1 ^ i64_2); )
+                check("v128.xor",   16*w, i8_1 ^ i8_2);
+                check("v128.xor",   8*w, i16_1 ^ i16_2);
+                check("v128.xor",   4*w, i32_1 ^ i32_2);
+                WASM64( check("v128.xor",   2*w, i64_1 ^ i64_2); )
 
-                check("v128.not",   8*w, ~i8_1);
-                check("v128.not",   4*w, ~i16_1);
-                check("v128.not",   2*w, ~i32_1);
-                WASM64( check("v128.not",   1*w, ~i64_1); )
+                check("v128.not",   16*w, ~i8_1);
+                check("v128.not",   8*w, ~i16_1);
+                check("v128.not",   4*w, ~i32_1);
+                WASM64( check("v128.not",   2*w, ~i64_1); )
 
                 // Bitwise select
-                check("v128.bitselect",   8*w, ((u8_1 & u8_3) | (u8_2 & ~u8_3)));
-                check("v128.bitselect",   4*w, ((u16_1 & u16_3) | (u16_2 & ~u16_3)));
-                check("v128.bitselect",   2*w, ((u32_1 & u32_3) | (u32_2 & ~u32_3)));
-                WASM64( check("v128.bitselect",   1*w, ((u64_1 & u64_3) | (u64_2 & ~u64_3))); )
+                check("v128.bitselect",   16*w, ((u8_1 & u8_3) | (u8_2 & ~u8_3)));
+                check("v128.bitselect",   8*w, ((u16_1 & u16_3) | (u16_2 & ~u16_3)));
+                check("v128.bitselect",   4*w, ((u32_1 & u32_3) | (u32_2 & ~u32_3)));
+                WASM64( check("v128.bitselect",   2*w, ((u64_1 & u64_3) | (u64_2 & ~u64_3))); )
 
-                check("v128.bitselect",   8*w, select(bool_1, u8_1, u8_2));
-                check("v128.bitselect",   4*w, select(bool_1, u16_1, u16_2));
-                // check("v128.bitselect",   2*w, select(bool_1, u32_1, u32_2)); )
-                WASM64( check("v128.bitselect",   1*w, select(bool_1, u64_1, u64_2)); )
+                check("v128.bitselect",   16*w, select(bool_1, u8_1, u8_2));
+                check("v128.bitselect",   8*w, select(bool_1, u16_1, u16_2));
+                // check("v128.bitselect",   4*w, select(bool_1, u32_1, u32_2)); )
+                WASM64( check("v128.bitselect",   2*w, select(bool_1, u64_1, u64_2)); )
 
                  // Any lane true
                  // All lanes true
                  // TODO: does Halide have any idiom that obviously generates these?
 
                  // Equality
-                check("i8x16.eq",   8*w, i8_1 == i8_2);
-                check("i16x8.eq",   4*w, i16_1 == i16_2);
-                check("i32x4.eq",   2*w, i32_1 == i32_2);
-                check("f32x4.eq",   2*w, f32_1 == f32_2);
-                WASM64( check("f64x2.eq",   1*w, f64_1 == f64_2); )
+                check("i8x16.eq",   16*w, i8_1 == i8_2);
+                check("i16x8.eq",   8*w, i16_1 == i16_2);
+                check("i32x4.eq",   4*w, i32_1 == i32_2);
+                check("f32x4.eq",   4*w, f32_1 == f32_2);
+                WASM64( check("f64x2.eq",   2*w, f64_1 == f64_2); )
 
                  // Non-equality
-                check("i8x16.ne",   8*w, i8_1 != i8_2);
-                check("i16x8.ne",   4*w, i16_1 != i16_2);
-                check("i32x4.ne",   2*w, i32_1 != i32_2);
-                check("f32x4.ne",   2*w, f32_1 != f32_2);
-                WASM64( check("f64x2.ne",   1*w, f64_1 != f64_2); )
+                check("i8x16.ne",   16*w, i8_1 != i8_2);
+                check("i16x8.ne",   8*w, i16_1 != i16_2);
+                check("i32x4.ne",   4*w, i32_1 != i32_2);
+                check("f32x4.ne",   4*w, f32_1 != f32_2);
+                WASM64( check("f64x2.ne",   2*w, f64_1 != f64_2); )
 
                 // Less than
-                check("i8x16.lt_s",   8*w, i8_1 < i8_2);
-                check("i16x8.lt_s",   4*w, i16_1 < i16_2);
-                check("i32x4.lt_s",   2*w, i32_1 < i32_2);
-                check("i8x16.lt_u",   8*w, u8_1 < u8_2);
-                check("i16x8.lt_u",   4*w, u16_1 < u16_2);
-                check("i32x4.lt_u",   2*w, u32_1 < u32_2);
-                check("f32x4.lt",     2*w, f32_1 < f32_2);
-                WASM64( check("f64x2.lt",     1*w, f64_1 < f64_2); )
+                check("i8x16.lt_s",   16*w, i8_1 < i8_2);
+                check("i16x8.lt_s",   8*w, i16_1 < i16_2);
+                check("i32x4.lt_s",   4*w, i32_1 < i32_2);
+                check("i8x16.lt_u",   16*w, u8_1 < u8_2);
+                check("i16x8.lt_u",   8*w, u16_1 < u16_2);
+                check("i32x4.lt_u",   4*w, u32_1 < u32_2);
+                check("f32x4.lt",     4*w, f32_1 < f32_2);
+                WASM64( check("f64x2.lt",     2*w, f64_1 < f64_2); )
 
                 // Less than or equal
-                check("i8x16.le_s",   8*w, i8_1 <= i8_2);
-                check("i16x8.le_s",   4*w, i16_1 <= i16_2);
-                check("i32x4.le_s",   2*w, i32_1 <= i32_2);
-                check("i8x16.le_u",   8*w, u8_1 <= u8_2);
-                check("i16x8.le_u",   4*w, u16_1 <= u16_2);
-                check("i32x4.le_u",   2*w, u32_1 <= u32_2);
-                check("f32x4.le",     2*w, f32_1 <= f32_2);
-                WASM64( check("f64x2.lt",     1*w, f64_1 <= f64_2); )
+                check("i8x16.le_s",   16*w, i8_1 <= i8_2);
+                check("i16x8.le_s",   8*w, i16_1 <= i16_2);
+                check("i32x4.le_s",   4*w, i32_1 <= i32_2);
+                check("i8x16.le_u",   16*w, u8_1 <= u8_2);
+                check("i16x8.le_u",   8*w, u16_1 <= u16_2);
+                check("i32x4.le_u",   4*w, u32_1 <= u32_2);
+                check("f32x4.le",     4*w, f32_1 <= f32_2);
+                WASM64( check("f64x2.lt",     2*w, f64_1 <= f64_2); )
 
                 // Greater than
                 // SKIPPED: Halide aggressively simplifies > into <= so we shouldn't see these
-                // check("i8x16.gt_s",   8*w, i8_1 > i8_2);
-                // check("i16x8.gt_s",   4*w, i16_1 > i16_2);
-                // check("i32x4.gt_s",   2*w, i32_1 > i32_2);
-                // check("i8x16.gt_u",   8*w, u8_1 > u8_2);
-                // check("i16x8.gt_u",   4*w, u16_1 > u16_2);
-                // check("i32x4.gt_u",   2*w, u32_1 > u32_2);
-                // check("f32x4.gt",     2*w, f32_1 > f32_2);
-                WASM64( check("f64x2.gt",     1*w, f64_1 > f64_2); )
+                // check("i8x16.gt_s",   16*w, i8_1 > i8_2);
+                // check("i16x8.gt_s",   8*w, i16_1 > i16_2);
+                // check("i32x4.gt_s",   4*w, i32_1 > i32_2);
+                // check("i8x16.gt_u",   16*w, u8_1 > u8_2);
+                // check("i16x8.gt_u",   8*w, u16_1 > u16_2);
+                // check("i32x4.gt_u",   4*w, u32_1 > u32_2);
+                // check("f32x4.gt",     4*w, f32_1 > f32_2);
+                WASM64( check("f64x2.gt",     2*w, f64_1 > f64_2); )
 
                 // Greater than or equal
                 // SKIPPED: Halide aggressively simplifies >= into < so we shouldn't see these
-                // check("i8x16.ge_s",   8*w, i8_1 >= i8_2);
-                // check("i16x8.ge_s",   4*w, i16_1 >= i16_2);
-                // check("i32x4.ge_s",   2*w, i32_1 >= i32_2);
-                // check("i8x16.ge_u",   8*w, u8_1 >= u8_2);
-                // check("i16x8.ge_u",   4*w, u16_1 >= u16_2);
-                // check("i32x4.ge_u",   2*w, u32_1 >= u32_2);
-                // check("f32x4.ge",     2*w, f32_1 >= f32_2);
-                WASM64( check("f64x2.lt",     1*w, f64_1 <= f64_2); )
+                // check("i8x16.ge_s",   16*w, i8_1 >= i8_2);
+                // check("i16x8.ge_s",   8*w, i16_1 >= i16_2);
+                // check("i32x4.ge_s",   4*w, i32_1 >= i32_2);
+                // check("i8x16.ge_u",   16*w, u8_1 >= u8_2);
+                // check("i16x8.ge_u",   8*w, u16_1 >= u16_2);
+                // check("i32x4.ge_u",   4*w, u32_1 >= u32_2);
+                // check("f32x4.ge",     4*w, f32_1 >= f32_2);
+                WASM64( check("f64x2.lt",     2*w, f64_1 <= f64_2); )
 
                 // Load
-                check("v128.load",   8*w, i8_1);
-                check("v128.load",   4*w, i16_1);
-                check("v128.load",   2*w, i32_1);
-                check("v128.load",   2*w, f32_1);
-                WASM64( check("v128.load",   1*w, f64_1); )
+                check("v128.load",   16*w, i8_1);
+                check("v128.load",   8*w, i16_1);
+                check("v128.load",   4*w, i32_1);
+                check("v128.load",   4*w, f32_1);
+                WASM64( check("v128.load",   2*w, f64_1); )
 
                 // Store
-                check("v128.store",   8*w, i8_1);
-                check("v128.store",   4*w, i16_1);
-                check("v128.store",   2*w, i32_1);
-                check("v128.store",   2*w, f32_1);
-                WASM64( check("v128.store",   1*w, f64_1); )
+                check("v128.store",   16*w, i8_1);
+                check("v128.store",   8*w, i16_1);
+                check("v128.store",   4*w, i32_1);
+                check("v128.store",   4*w, f32_1);
+                WASM64( check("v128.store",   2*w, f64_1); )
 
                 // Negation
-                check("f32x4.neg",   2*w, -f32_1);
-                WASM64( check("f64x2.neg",   1*w, -f64_1); )
+                check("f32x4.neg",   4*w, -f32_1);
+                WASM64( check("f64x2.neg",   2*w, -f64_1); )
 
                 // Absolute value
-                check("f32x4.abs",   2*w, abs(f32_1));
-                WASM64( check("f64x2.abs",   1*w, abs(f64_1)); )
+                check("f32x4.abs",   4*w, abs(f32_1));
+                WASM64( check("f64x2.abs",   2*w, abs(f64_1)); )
 
                 // NaN-propagating minimum
-                check("f32x4.min",   2*w, min(f32_1, f32_2));
-                WASM64( check("f64x2.min",   1*w, min(f64_1, f64_2)); )
+                check("f32x4.min",   4*w, min(f32_1, f32_2));
+                WASM64( check("f64x2.min",   2*w, min(f64_1, f64_2)); )
 
                 // NaN-propagating maximum
-                check("f32x4.max",   2*w, max(f32_1, f32_2));
-                WASM64( check("f64x2.max",   1*w, max(f64_1, f64_2)); )
+                check("f32x4.max",   4*w, max(f32_1, f32_2));
+                WASM64( check("f64x2.max",   2*w, max(f64_1, f64_2)); )
 
                 // Floating-point addition
-                check("f32x4.add",   2*w, f32_1 + f32_2);
-                WASM64( check("f64x2.add",   1*w, f64_1 + f64_2); )
+                check("f32x4.add",   4*w, f32_1 + f32_2);
+                WASM64( check("f64x2.add",   2*w, f64_1 + f64_2); )
 
                 // Floating-point subtraction
-                check("f32x4.sub",   2*w, f32_1 - f32_2);
-                WASM64( check("f64x2.sub",   1*w, f64_1 - f64_2); )
+                check("f32x4.sub",   4*w, f32_1 - f32_2);
+                WASM64( check("f64x2.sub",   2*w, f64_1 - f64_2); )
 
                 // Floating-point division
-                // check("f32x4.div",   2*w, f32_1 / f32_2);  -- TODO: known bug, https://bugs.chromium.org/p/v8/issues/detail?id=8460
-                WASM64( check("f64x2.div",   1*w, f64_1 / f64_2); )
+                // check("f32x4.div",   4*w, f32_1 / f32_2);  -- TODO: known bug, https://bugs.chromium.org/p/v8/issues/detail?id=8460
+                WASM64( check("f64x2.div",   2*w, f64_1 / f64_2); )
 
                 // Floating-point multiplication
-                check("f32x4.mul",   2*w, f32_1 * f32_2);
-                WASM64( check("f64x2.mul",   1*w, f64_1 * f64_2); )
+                check("f32x4.mul",   4*w, f32_1 * f32_2);
+                WASM64( check("f64x2.mul",   2*w, f64_1 * f64_2); )
 
                 // Square root
-                // check("f32x4.sqrt",   2*w, sqrt(f32_1));  -- TODO: known bug, https://bugs.chromium.org/p/v8/issues/detail?id=8460
-                WASM64( check("f64x2.sqrt",   1*w, sqrt(f64_1)); )
+                // check("f32x4.sqrt",   4*w, sqrt(f32_1));  -- TODO: known bug, https://bugs.chromium.org/p/v8/issues/detail?id=8460
+                WASM64( check("f64x2.sqrt",   2*w, sqrt(f64_1)); )
 
                 // Integer to floating point
-                check("f32x4.convert_i32x4_s",   4*w, cast<float>(i32_1));
-                check("f32x4.convert_i32x4_u",   4*w, cast<float>(u32_1));
-                WASM64( check("f64x2.convert_i64x2_s",   4*w, cast<double>(i64_1)); )
-                WASM64( check("f64x2.convert_i64x2_u",   4*w, cast<double>(u64_1)); )
+                check("f32x4.convert_i32x4_s",   8*w, cast<float>(i32_1));
+                check("f32x4.convert_i32x4_u",   8*w, cast<float>(u32_1));
+                WASM64( check("f64x2.convert_i64x2_s",   8*w, cast<double>(i64_1)); )
+                WASM64( check("f64x2.convert_i64x2_u",   8*w, cast<double>(u64_1)); )
 
                 // Floating point to integer with saturation
-                check("i32x4.trunc_sat_f32x4_s",   4*w, cast<int32_t>(f32_1));
-                check("i32x4.trunc_sat_f32x4_u",   4*w, cast<uint32_t>(f32_1));
-                WASM64( check("i64x2.trunc_sat_f64x2_s",   4*w, cast<int64_t>(f64_1)); )
-                WASM64( check("i64x2.trunc_sat_f64x2_u",   4*w, cast<uint64_t>(f64_1)); )
+                check("i32x4.trunc_sat_f32x4_s",   8*w, cast<int32_t>(f32_1));
+                check("i32x4.trunc_sat_f32x4_u",   8*w, cast<uint32_t>(f32_1));
+                WASM64( check("i64x2.trunc_sat_f64x2_s",   8*w, cast<int64_t>(f64_1)); )
+                WASM64( check("i64x2.trunc_sat_f64x2_u",   8*w, cast<uint64_t>(f64_1)); )
             }
         }
     }
