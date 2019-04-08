@@ -55,12 +55,11 @@ void CodeGen_WebAssembly::visit(const Cast *op) {
         {Target::WasmSimd128, true, UInt(8, 16), 0, "llvm.uadd.sat.v16i8", u8_sat(wild_u16x_ + wild_u16x_)},
         {Target::WasmSimd128, true, Int(16, 8), 0, "llvm.sadd.sat.v8i16", i16_sat(wild_i32x_ + wild_i32x_)},
         {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.uadd.sat.v8i16", u16_sat(wild_u32x_ + wild_u32x_)},
-        // These are (apparently) not implemented properly in V8 yet;
-        // bug https://bugs.chromium.org/p/v8/issues/detail?id=8460 I think?
-        // {Target::WasmSimd128, true, Int(8, 16), 0, "llvm.wasm.sub.saturate.signed.v16i8", i8_sat(wild_i16x_ - wild_i16x_)},
-        // {Target::WasmSimd128, true, UInt(8, 16), 0, "llvm.wasm.sub.saturate.unsigned.v16i8", u8_sat(wild_u16x_ - wild_u16x_)},
-        // {Target::WasmSimd128, true, Int(16, 8), 0, "llvm.wasm.sub.saturate.signed.v8i16", i16_sat(wild_i32x_ - wild_i32x_)},
-        // {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.sub.saturate.unsigned.v8i16", u16_sat(wild_u32x_ - wild_u32x_)},
+        // N.B. Saturating subtracts are expressed by widening to a *signed* type
+        {Target::WasmSimd128, true, Int(8, 16), 0, "llvm.wasm.sub.saturate.signed.v16i8", i8_sat(wild_i16x_ - wild_i16x_)},
+        {Target::WasmSimd128, true, UInt(8, 16), 0, "llvm.wasm.sub.saturate.unsigned.v16i8", u8_sat(wild_i16x_ - wild_i16x_)},
+        {Target::WasmSimd128, true, Int(16, 8), 0, "llvm.wasm.sub.saturate.signed.v8i16", i16_sat(wild_i32x_ - wild_i32x_)},
+        {Target::WasmSimd128, true, UInt(16, 8), 0, "llvm.wasm.sub.saturate.unsigned.v8i16", u16_sat(wild_i32x_ - wild_i32x_)},
     };
 
     for (size_t i = 0; i < sizeof(patterns)/sizeof(patterns[0]); i++) {

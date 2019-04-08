@@ -2237,16 +2237,12 @@ check("v*.w += vrmpy(v*.b,v*.b)", hvx_width, i32_1 + i32(i8_1)*i8_1 + i32(i8_2)*
                 check("i8x16.add_saturate_u",   16*w, u8_sat(u16(u8_1) + u16(u8_2)));
                 check("i16x8.add_saturate_s",   8*w, i16_sat(i32(i16_1) + i32(i16_2)));
                 check("i16x8.add_saturate_u",   8*w, u16_sat(u32(u16_1) + u32(u16_2)));
-
-                // These are (apparently) not implemented properly in V8 yet;
-                // bug https://bugs.chromium.org/p/v8/issues/detail?id=8460 I think?
                 // Saturating integer subtraction
-                /*
                 check("i8x16.sub_saturate_s",   16*w, i8_sat(i16(i8_1) - i16(i8_2)));
                 check("i16x8.sub_saturate_s",   8*w, i16_sat(i32(i16_1) - i32(i16_2)));
-                check("i8x16.sub_saturate_u",   16*w, u8_sat(u16(u8_1) - u16(u8_2)));
-                check("i16x8.sub_saturate_u",   8*w, u16_sat(u32(u16_1) - u32(u16_2)));
-                */
+                // N.B. Saturating subtracts are expressed by widening to a *signed* type
+                check("i8x16.sub_saturate_u",   16*w, u8_sat(i16(u8_1) - i16(u8_2)));
+                check("i16x8.sub_saturate_u",   8*w, u16_sat(i32(u16_1) - i32(u16_2)));
 
                 // These aren't being generated, known bug: https://bugs.chromium.org/p/v8/issues/detail?id=8934
                 // Left shift by scalar
