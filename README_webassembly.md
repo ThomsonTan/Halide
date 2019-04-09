@@ -4,7 +4,7 @@ This branch represents an effort to support WebAssembly (Wasm) code generation f
 
 It is very much a work-in-progress at this point; be sure to read all of the current limitations. Some of the most important:
 
-- SIMD can be enabled via Target::WasmSimd128, but is unlikely to work work (yet), as existing support in the LLVM backend and/or V8 isn't quite solid enough yet; we hope to be able to support this reliably soon.
+- SIMD can be enabled via Target::WasmSimd128, but is likely to require building with LLVM 9+ and running in V8 7.5 or later to work properly.
 - Multithreading is not yet ready to be supported -- there isn't even a Feature flag to enable it yet -- but we hope it will be soon.
 - Halide's JIT for Wasm is extremely limited and really useful only for internal testing purposes.
 
@@ -18,11 +18,11 @@ Note that for all of the above, earlier versions might work, but have not been t
 
 # AOT Limitations
 
-Halide outputs a Wasm object (.o) or static library (.a) file, much like any other architecture; to use it, of course, you must link it to suitable calling code. Additionally, you must link to something that provides an implementation of `libc`; as a practical matter, this means using the Emscripten tool to do your linking, as it provides the most complete such implementation we're aware of.
+Halide outputs a Wasm object (.o) or static library (.a) file, much like any other architecture; to use it, of course, you must link it to suitable calling code. Additionally, you must link to something that provides an implementation of `libc`; as a practical matter, this means using the Emscripten tool to do your linking, as it provides the most complete such implementation we're aware of at this time.
 
 - Halide ahead-of-time tests assume/require that you have Emscripten installed and available on your system.
 
-- Halide doesn't support multithreading in Wasm just yet; we hope to focus on that soon.
+- Halide doesn't support multithreading in Wasm just yet; we hope to add that in the future.
 
 # JIT Limitations
 
@@ -30,7 +30,7 @@ It's important to reiterate that the JIT mode will never be appropriate for anyt
 
 - It requires linking both an instance of the V8 library and LLVM's wasm-ld tool into libHalide. (We would like to offer support for other Wasm engines in the future, e.g. SpiderMonkey, to provide more balanced testing, but there is no timetable for this.)
 - Every JIT invocation requires redundant recompilation of the Halide runtime. (We hope to improve this once the LLVM Wasm backend can support dlopen() properly.)
-- Wasm effectively runs in a private, 32-bit memory address space; while the host has access to that entire space, the reverse is not true, and thus any `define_extern` calls require copying all `halide_buffer_t` data across the Wasm<->host boundary in both directions.
+- Wasm effectively runs in a private, 32-bit memory address space; while the host has access to that entire space, the reverse is not true, and thus any `define_extern` calls require copying all `halide_buffer_t` data across the Wasm<->host boundary in both directions. This has severe implications for existing benchmarks, which don't currently attempt to account for this extra overhead.
 - Host functions used via `define_extern` or `HalideExtern` cannot accept or return values that are pointer types or 64-bit integer types; this includes things like `const char *` and `user_context`. Fixing this is tractable, it was just omitted for now as the fix is nontrivial and the tests that are affected are mostly non-critical. (Note that `halide_buffer_t*` is explicitly supported as a special case, however.)
 - Threading isn't supported at all (yet); all `parallel()` schedules will be run serially.
 - The `.async()` directive isn't supported at all, not even in serial-emulation mode.
@@ -60,13 +60,13 @@ svn co https://llvm.org/svn/llvm-project/lld/trunk /path/to/llvm-trunk/tools/lld
 
 (You might have to do a clean build of LLVM for CMake to notice that you've added a tool.)
 
-- Install libv8 and the d8 shell tool (instructions omitted), or build from source if you prefer (instructions omitted). Note that using shared-library builds of V8 may be problematic on some platforms (e.g. OSX) due to libc++ conflict issues; using a static-library version may be simpler for those.
+- Install libv8 and the d8 shell tool (instructions omitted), or build from source if you prefer (instructions omitted). Note that using shared-library builds of V8 may be problematic on some platforms (e.g. OSX) due to libc++ conflict issues; using a static-library version may be simpler for those. Also note that (as of this writing), libV8 v7.5+ may not be available in prebuilt form for your platform.
 
 - Set V8_INCLUDE_PATH and V8_LIB_PATH to point to the paths for V8 include files and library, respectively.
 
 - Set WITH_V8=1
 
-- To run the JIT tests, set `HL_JIT_TARGET=wasm-32-wasmrt` and run normally. The test suites which we have vetted to work include correctness, performance, error, and warning. (Some of the others could likely be made to work with modest effort.)
+- To run the JIT tests, set `HL_JIT_TARGET=wasm-32-wasmrt` (or `HL_JIT_TARGET=wasm-32-wasmrt-wasm_simd128`) and run normally. The test suites which we have vetted to work include correctness, performance, error, and warning. (Some of the others could likely be made to work with modest effort.)
 
 ## Enabling wasm AOT
 
@@ -82,18 +82,17 @@ If you want to test ahead-of-time code generation (and you almost certainly will
 
 # Known Limitations And Caveats
 - We have only tested with EMCC_WASM_BACKEND=1; using the fastcomp backend can probably be made to work but we haven't attempted to do so.
-- Using the JIT requires that we link the `wasm-ld` tool into libHalide; with some work this need could (and should) probably be eliminated.
-- CMake support hasn't been investigated yet, but should be straightforward.
+- Using the JIT requires that we link the `wasm-ld` tool into libHalide; with some work this need could possibly be eliminated.
+- CMake support hasn't been investigated yet, but should be straightforward. (Patches welcome.)
 - OSX and Linux-x64 have been tested. Windows hasn't; it should be supportable with some work. (Patches welcome.)
-- The entire apps/ folder has not investigated yet. Many of them should be supportable with some work.
+- The entire apps/ folder has not investigated yet. Many of them should be supportable with some work. (Patches welcome.)
 - We currently use d8 as a test environment for AOT code; we should probably use headless Chrome instead (this is probably required to allow for using threads in AOT code)
 
 
 # Known TODO:
 
 - There's some invasive hackiness in Codgen_LLVM to support the JIT trampolines; this really should be refactored to be less hacky.
-- How close is SIMD to being ready? Need to work with the WebAssembly/V8 team to assess.
-- Can we rework JIT to avoid the need to link in wasm-ld? This is probably doable, as the wasm object files produced by the LLVM backend are close enough to an executable form that we could likely make it work with some massaging on our side, but it's not clear whether this would be a bad idea or not (i.e., would it be unreasonably fragile).
+- Can we rework JIT to avoid the need to link in wasm-ld? This might be doable, as the wasm object files produced by the LLVM backend are close enough to an executable form that we could likely make it work with some massaging on our side, but it's not clear whether this would be a bad idea or not (i.e., would it be unreasonably fragile).
 - Improve the JIT to allow more of the tests to run; in particular, externs with 64-bit arguments (doable but omitted for expediency) and GPU support (ditto).
 - Can we support threads in the JIT without an unreasonable amount of work? Unknown at this point.
 - Someday, we should support alternate JIT/AOT test environments (e.g. SpiderMonkey/Firefox).
