@@ -89,6 +89,7 @@ set(RUNTIME_CPP
   to_string
   trace_helper
   tracing
+  wasm_cpu_features
   windows_abort
   windows_clock
   windows_cuda
@@ -113,6 +114,7 @@ set (RUNTIME_LL
   posix_math
   powerpc
   ptx_dev
+  wasm_math
   win32_math
   x86
   x86_avx

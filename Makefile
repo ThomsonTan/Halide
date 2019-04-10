@@ -834,6 +834,7 @@ RUNTIME_CPP_COMPONENTS = \
   to_string \
   trace_helper \
   tracing \
+  wasm_cpu_features \
   windows_abort \
   windows_clock \
   windows_cuda \

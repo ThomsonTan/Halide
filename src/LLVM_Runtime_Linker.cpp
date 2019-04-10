@@ -244,8 +244,10 @@ DECLARE_NO_INITMOD(hexagon_cpu_features)
 #endif  // WITH_HEXAGON
 
 #ifdef WITH_WEBASSEMBLY
+DECLARE_CPP_INITMOD(wasm_cpu_features)
 DECLARE_LL_INITMOD(wasm_math)
 #else
+DECLARE_CPP_INITMOD(wasmcpu_features)
 DECLARE_NO_INITMOD(wasm_math)
 #endif  // WITH_WEBASSEMBLY
 
@@ -993,6 +995,9 @@ std::unique_ptr<llvm::Module> get_initial_module_for_target(Target t, llvm::LLVM
             }
             if (t.arch == Target::Hexagon) {
                 modules.push_back(get_initmod_hexagon_cpu_features(c, bits_64, debug));
+            }
+            if (t.arch == Target::WebAssembly) {
+                modules.push_back(get_initmod_wasm_cpu_features(c, bits_64, debug));
             }
         }
 
