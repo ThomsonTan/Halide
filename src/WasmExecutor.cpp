@@ -244,6 +244,9 @@ using JITExternMap = std::map<std::string, Halide::JITExtern>;
 
 #define V8_API_VERSION ((V8_MAJOR_VERSION * 10) + V8_MINOR_VERSION)
 
+static_assert(V8_API_VERSION >= 74,
+              "Halide requires V8 v7.4 or later when compiling WITH_V8.");
+
 namespace Halide {
 namespace Internal {
 namespace {
@@ -1236,6 +1239,15 @@ WasmModuleContents::WasmModuleContents(
 
     wdebug(0) << "Compiling wasm function " << fn_name << "\n";
 
+#if V8_API_VERSION < 75
+    // V8 v7.4 works fine for non-SIMD work, but has various SIMD-related issues
+    // that will make some of our self-tests fail (and thus probably cause user
+    // code to be flaky as well); issue a warning if someone tries to test in this way.
+    if (target.has_feature(Target::WasmSimd128)) {
+        user_warning << "Versions of V8 prior to v7.5 may not work correctly with wasm_simd128 enabled.\n";
+    }
+#endif
+
 #ifdef WITH_V8
     static std::once_flag init_v8_once;
     std::call_once(init_v8_once, []() {
@@ -1294,9 +1306,6 @@ WasmModuleContents::WasmModuleContents(
 
     std::vector<char> final_wasm = compile_to_wasm(module, fn_name);
 
-#if V8_API_VERSION < 74
-    using WasmModuleObject = WasmCompiledModule;
-#endif
     MaybeLocal<WasmModuleObject> maybe_compiled = WasmModuleObject::DeserializeOrCompile(isolate,
         /* serialized_module */ {nullptr, 0},
         /* wire_bytes */        {(const uint8_t *) final_wasm.data(), final_wasm.size()}

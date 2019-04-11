@@ -4,7 +4,7 @@ This branch represents an effort to support WebAssembly (Wasm) code generation f
 
 It is very much a work-in-progress at this point; be sure to read all of the current limitations. Some of the most important:
 
-- SIMD can be enabled via Target::WasmSimd128, but is likely to require building with LLVM 9+ and running in V8 7.5 or later to work properly.
+- SIMD can be enabled via Target::WasmSimd128, but is likely to require building with LLVM 9+ and running in V8 7.5 or later to work properly. (Earlier versions of V8 should work for non-SIMD usage.)
 - Multithreading is not yet ready to be supported -- there isn't even a Feature flag to enable it yet -- but we hope it will be soon.
 - Halide's JIT for Wasm is extremely limited and really useful only for internal testing purposes.
 
@@ -60,7 +60,9 @@ svn co https://llvm.org/svn/llvm-project/lld/trunk /path/to/llvm-trunk/tools/lld
 
 (You might have to do a clean build of LLVM for CMake to notice that you've added a tool.)
 
-- Install libv8 and the d8 shell tool (instructions omitted), or build from source if you prefer (instructions omitted). Note that using shared-library builds of V8 may be problematic on some platforms (e.g. OSX) due to libc++ conflict issues; using a static-library version may be simpler for those. Also note that (as of this writing), libV8 v7.5+ may not be available in prebuilt form for your platform.
+- Install libv8 and the d8 shell tool (instructions omitted), or build from source if you prefer (instructions omitted). We are able to compile with v7.4 (but not earlier versions), but there are SIMD-related bugs in that version that will cause many of our tests to fail; if you are going to test with `wasm_simd128` at all, you should really use V8 v7.5 or later.
+
+Note that using shared-library builds of V8 may be problematic on some platforms (e.g. OSX) due to libc++ conflict issues; using a static-library version may be simpler for those. Also note that (as of this writing), libV8 v7.5+ may not be available in prebuilt form for your platform.
 
 - Set V8_INCLUDE_PATH and V8_LIB_PATH to point to the paths for V8 include files and library, respectively.
 
