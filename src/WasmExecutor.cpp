@@ -1208,6 +1208,7 @@ struct WasmModuleContents {
 
 #ifdef WITH_V8
     v8::Isolate *isolate = nullptr;
+    v8::ArrayBuffer::Allocator* array_buffer_allocator = nullptr;
     v8::Persistent<v8::Context> v8_context;
     v8::Persistent<v8::Function> v8_function;
 #endif
@@ -1280,9 +1281,11 @@ WasmModuleContents::WasmModuleContents(
         }
     });
 
+    array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+
     Isolate::CreateParams isolate_params;
     isolate_params.snapshot_blob = nullptr;
-    isolate_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+    isolate_params.array_buffer_allocator = array_buffer_allocator;
     // Create a new Isolate and make it the current one.
     isolate = Isolate::New(isolate_params);
 
@@ -1522,6 +1525,7 @@ WasmModuleContents::~WasmModuleContents() {
 
         isolate->Dispose();
     }
+    delete array_buffer_allocator;
 #endif
 }
 
