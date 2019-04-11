@@ -247,7 +247,7 @@ DECLARE_NO_INITMOD(hexagon_cpu_features)
 DECLARE_CPP_INITMOD(wasm_cpu_features)
 DECLARE_LL_INITMOD(wasm_math)
 #else
-DECLARE_CPP_INITMOD(wasmcpu_features)
+DECLARE_NO_INITMOD(wasm_cpu_features)
 DECLARE_NO_INITMOD(wasm_math)
 #endif  // WITH_WEBASSEMBLY
 
