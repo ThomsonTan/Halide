@@ -383,7 +383,7 @@ JITModule JITModule::make_trampolines_module(const Target &target_arg,
     target.set_feature(Target::JIT);
 
     JITModule result;
-    CodeGen_LLVM *codegen = CodeGen_LLVM::new_for_target(target, result.jit_module->context);
+    std::unique_ptr<CodeGen_LLVM> codegen(CodeGen_LLVM::new_for_target(target, result.jit_module->context));
     codegen->init_for_codegen("trampolines");
     std::vector<std::string> requested_exports;
     for (const std::pair<std::string, JITExtern> &extern_entry : externs) {
