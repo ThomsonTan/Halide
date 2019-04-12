@@ -714,7 +714,6 @@ RUNTIME_CPP_COMPONENTS = \
   cache \
   can_use_target \
   cuda \
-  d3d12compute \
   destructors \
   device_interface \
   errors \
@@ -781,6 +780,7 @@ RUNTIME_CPP_COMPONENTS = \
   to_string \
   trace_helper \
   tracing \
+  win64_d3d12compute \
   windows_abort \
   windows_clock \
   windows_cuda \
@@ -798,7 +798,6 @@ RUNTIME_LL_COMPONENTS = \
   aarch64 \
   arm \
   arm_no_neon \
-  d3d12_abi_patch_64 \
   hvx_64 \
   hvx_128 \
   mips \

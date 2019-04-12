@@ -1043,7 +1043,7 @@ enum D3D_PRIMITIVE_TOPOLOGY
 #endif
 
 /* dxgiformat.h */
-typedef enum DXGI_FORMAT
+typedef enum DXGI_FORMAT : uint32_t
 {
     DXGI_FORMAT_UNKNOWN                     = 0,
     DXGI_FORMAT_R32G32B32A32_TYPELESS       = 1,
@@ -6210,7 +6210,7 @@ typedef struct DXGI_ADAPTER_DESC
     }   DXGI_ADAPTER_DESC;
 
 typedef 
-enum DXGI_ADAPTER_FLAG
+enum DXGI_ADAPTER_FLAG : uint32_t
     {
         DXGI_ADAPTER_FLAG_NONE        = 0,
         DXGI_ADAPTER_FLAG_REMOTE      = 1,

@@ -22,7 +22,6 @@ set(RUNTIME_CPP
   cache
   can_use_target
   cuda
-  d3d12compute
   destructors
   device_interface
   errors
@@ -89,6 +88,7 @@ set(RUNTIME_CPP
   to_string
   trace_helper
   tracing
+  win64_d3d12compute
   windows_abort
   windows_clock
   windows_cuda
@@ -118,7 +118,6 @@ set (RUNTIME_LL
   x86_avx
   x86_avx2
   x86_sse41
-  d3d12_abi_patch_64
 )
 
 set (RUNTIME_BC
@@ -146,6 +145,7 @@ set(INITIAL_MODULES )
 function(add_runtime_modules TARGET_RUNTIME_FILES TARGET_RUNTIME_DIR)
   foreach (i ${TARGET_RUNTIME_FILES} )
     foreach (j ${ARCHS} )
+      message(WARNING, ${i})
       IF (${j} EQUAL 32)
         IF (${i} MATCHES "windows_.*")
           # win32 uses the stdcall calling convention, which is x86-specific
@@ -155,8 +155,13 @@ function(add_runtime_modules TARGET_RUNTIME_FILES TARGET_RUNTIME_DIR)
           set(TARGET "le32-unknown-nacl-unknown")
         ENDIF()
       ELSE()
-        # generic 64-bit code
-        set(TARGET "le64-unknown-unknown-unknown")
+        IF (${i} MATCHES "win64_.*")
+            # win64 ABI is required to call COM APIs, like d3d12.
+          set(TARGET "x86_64-pc-windows-msvc")
+        ELSE()
+          # generic 64-bit code
+          set(TARGET "le64-unknown-unknown-unknown")
+        ENDIF()
       ENDIF()
       set(SOURCE "${TARGET_RUNTIME_DIR}${i}.cpp")
       set(LL_D "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.build/${NATIVE_INT_DIR}initmod.${i}_${j}_debug.ll")
